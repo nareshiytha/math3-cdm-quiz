@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NC Math 3 — CDM Phase 2 Problem Set</title>
+<style>
+  :root { --ink:#1c2430; --muted:#5b6b7f; --accent:#205c40; --accent2:#e8f2ec; --line:#d7dee6; --bg:#f6f8fa; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: Georgia, 'Times New Roman', serif; color:var(--ink); background:var(--bg); }
+  header { background:#fff; border-bottom:1px solid var(--line); padding:18px 20px 12px; position:sticky; top:0; z-index:5; }
+  header h1 { margin:0 0 4px; font-size:22px; }
+  header p { margin:0; color:var(--muted); font-size:14px; }
+  .bar { height:8px; background:var(--accent2); border-radius:4px; margin-top:10px; overflow:hidden; }
+  .bar > div { height:100%; background:var(--accent); width:0%; transition:width .3s; }
+  .progress-label { font-size:13px; color:var(--muted); margin-top:4px; }
+  nav.filters { display:flex; flex-wrap:wrap; gap:8px; padding:14px 20px 0; }
+  nav.filters button { font:inherit; font-size:14px; padding:6px 12px; border:1px solid var(--line); background:#fff; border-radius:20px; cursor:pointer; }
+  nav.filters button.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+  main { max-width:860px; margin:0 auto; padding:16px 20px 60px; }
+  .card { background:#fff; border:1px solid var(--line); border-radius:10px; padding:20px 22px; margin-bottom:18px; }
+  .card h2 { margin:0 0 2px; font-size:19px; }
+  .meta { color:var(--muted); font-size:13.5px; margin-bottom:10px; }
+  .badge { display:inline-block; background:var(--accent2); color:var(--accent); border-radius:4px; padding:1px 7px; margin-right:5px; font-size:12.5px; font-family:ui-monospace, Menlo, monospace; }
+  .problem-body { font-size:16.5px; line-height:1.55; }
+  .problem-body table, .solution table { border-collapse:collapse; margin:10px 0; }
+  .problem-body th, .problem-body td, .solution th, .solution td { border:1px solid var(--line); padding:4px 9px; font-size:15px; }
+  .evidence { background:#fdf8ec; border:1px solid #eadfbe; border-radius:8px; padding:10px 14px; font-size:14.5px; margin:12px 0; }
+  .evidence strong { color:#7a5c00; }
+  details.reveals { font-size:14px; color:var(--muted); margin:8px 0; }
+  textarea { width:100%; min-height:110px; font:inherit; font-size:15.5px; padding:10px; border:1px solid var(--line); border-radius:8px; margin-top:6px; }
+  .row { display:flex; gap:10px; flex-wrap:wrap; margin-top:12px; align-items:center; }
+  .row button { font:inherit; font-size:14.5px; padding:8px 14px; border-radius:8px; border:1px solid var(--line); background:#fff; cursor:pointer; }
+  .row button.done-btn.is-done { background:var(--accent); color:#fff; border-color:var(--accent); }
+  .row button.sol-btn { border-color:var(--accent); color:var(--accent); }
+  .solution { border-top:1px dashed var(--line); margin-top:16px; padding-top:12px; font-size:15.5px; line-height:1.55; display:none; }
+  .solution.open { display:block; }
+  .solution h3 { margin:0 0 6px; font-size:16px; color:var(--accent); }
+  .pager { display:flex; justify-content:space-between; margin:6px 0 18px; }
+  .pager button { font:inherit; font-size:14.5px; padding:8px 16px; border-radius:8px; border:1px solid var(--line); background:#fff; cursor:pointer; }
+  .pager button:disabled { opacity:.4; cursor:default; }
+  footer { text-align:center; color:var(--muted); font-size:13px; padding:0 20px 30px; }
+  @media print { header, nav.filters, .pager, .row, textarea { display:none; } }
+</style>
+<script>
+  window.MathJax = { tex: { inlineMath: [['$', '$'], ['\\(', '\\)']], displayMath: [['$$', '$$']] } };
+</script>
+<script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+<header>
+  <h1>NC Math 3 — CDM Phase 2 Problem Set</h1>
+  <p>62 original word problems aligned to the NC Math 3 Standard Course of Study (NCDPI Unpacking, rev. June 2022). Your work is saved in this browser.</p>
+  <div class="bar"><div id="barfill"></div></div>
+  <div class="progress-label" id="proglabel"></div>
+</header>
+
+<nav class="filters" id="filters"></nav>
+<main id="main"></main>
+<footer>Worked solutions load only when you ask for them, from a separate file (solutions.js). To run this as a student-only quiz, publish the site without solutions.js.</footer>
+
+<script src="problems.js"></script>
+<script>
+const STRANDS = ["All problems", ...new Set(PROBLEMS.map(p => p.strand))];
+let filter = "All problems";
+let current = 0; // index into filtered list
+const store = JSON.parse(localStorage.getItem("math3cdm") || "{}");
+function save() { localStorage.setItem("math3cdm", JSON.stringify(store)); }
+
+const filtersEl = document.getElementById("filters");
+STRANDS.forEach(s => {
+  const b = document.createElement("button");
+  b.textContent = s;
+  if (s === filter) b.classList.add("active");
+  b.onclick = () => { filter = s; current = 0; render(); };
+  filtersEl.appendChild(b);
+});
+
+function filtered() { return filter === "All problems" ? PROBLEMS : PROBLEMS.filter(p => p.strand === filter); }
+
+function updateProgress() {
+  const done = PROBLEMS.filter(p => store[p.n] && store[p.n].done).length;
+  document.getElementById("barfill").style.width = (100 * done / PROBLEMS.length) + "%";
+  document.getElementById("proglabel").textContent = done + " of " + PROBLEMS.length + " problems marked complete";
+}
+
+function render() {
+  document.querySelectorAll("#filters button").forEach(b => b.classList.toggle("active", b.textContent === filter));
+  const list = filtered();
+  const main = document.getElementById("main");
+  main.innerHTML = "";
+  if (!list.length) { main.innerHTML = "<p>No problems in this section.</p>"; return; }
+  current = Math.max(0, Math.min(current, list.length - 1));
+  const p = list[current];
+  const st = store[p.n] || {};
+
+  const pager = document.createElement("div");
+  pager.className = "pager";
+  pager.innerHTML = `<button ${current === 0 ? "disabled" : ""} id="prev">← Previous</button>
+    <span>Problem ${p.n} of 62 · ${current + 1} of ${list.length} in this view</span>
+    <button ${current === list.length - 1 ? "disabled" : ""} id="next">Next →</button>`;
+  main.appendChild(pager);
+
+  const card = document.createElement("section");
+  card.className = "card";
+  card.innerHTML = `
+    <h2>Problem ${p.n} — ${p.topic}</h2>
+    <div class="meta">${p.standards.map(s => `<span class="badge">${s}</span>`).join("")} ${p.strand}</div>
+    <div class="problem-body">${p.html}</div>
+    <div class="evidence"><strong>Expected evidence:</strong> ${p.evidence}</div>
+    <details class="reveals"><summary>For reviewers — what this problem reveals</summary>${p.reveals}<br><em>${p.standardsDetail}</em></details>
+    <label><strong>Your work and final answer</strong> (include units and interpret your answer in the situation):
+      <textarea id="work" placeholder="Show your reasoning here…">${st.work || ""}</textarea></label>
+    <div class="row">
+      <button class="done-btn ${st.done ? "is-done" : ""}" id="donebtn">${st.done ? "✓ Marked complete" : "Mark complete"}</button>
+      <button class="sol-btn" id="solbtn">Show worked solution</button>
+    </div>
+    <div class="solution" id="solution"><h3>Worked solution</h3><div id="solbody"></div></div>`;
+  main.appendChild(card);
+
+  document.getElementById("prev").onclick = () => { current--; render(); window.scrollTo(0, 0); };
+  document.getElementById("next").onclick = () => { current++; render(); window.scrollTo(0, 0); };
+  document.getElementById("work").addEventListener("input", e => {
+    store[p.n] = store[p.n] || {}; store[p.n].work = e.target.value; save();
+  });
+  document.getElementById("donebtn").onclick = e => {
+    store[p.n] = store[p.n] || {}; store[p.n].done = !store[p.n].done; save(); updateProgress();
+    e.target.classList.toggle("is-done", store[p.n].done);
+    e.target.textContent = store[p.n].done ? "✓ Marked complete" : "Mark complete";
+  };
+  document.getElementById("solbtn").onclick = () => {
+    const box = document.getElementById("solution");
+    if (box.classList.contains("open")) { box.classList.remove("open"); return; }
+    const fill = () => {
+      document.getElementById("solbody").innerHTML = SOLUTIONS[p.n] || "<p>No solution available.</p>";
+      box.classList.add("open");
+      if (window.MathJax) MathJax.typesetPromise([box]);
+    };
+    if (typeof SOLUTIONS !== "undefined") { fill(); return; }
+    const s = document.createElement("script");
+    s.src = "solutions.js";
+    s.onload = fill;
+    s.onerror = () => { document.getElementById("solbody").innerHTML = "<p>Solutions file (solutions.js) is not published on this site.</p>"; box.classList.add("open"); };
+    document.body.appendChild(s);
+  };
+  if (window.MathJax) MathJax.typesetPromise([main]);
+  updateProgress();
+}
+render();
+</script>
+</body>
+</html>
