@@ -66,7 +66,7 @@
 </div>
 <nav class="filters" id="filters"></nav>
 <main id="main"></main>
-<footer>Happy Learning!</footer>
+<footer>Worked solutions load only when you ask for them, from separate files (solutions.js / sets_solutions.js). To run this as a student-only quiz, publish the site without those two files.</footer>
 
 <script src="problems.js"></script>
 <script src="sets.js"></script>
@@ -102,7 +102,7 @@ function currentList() {
   if (mode === "daily") return DAILY_PROBLEMS.filter(p => p.set === day);
   return bankFilter === "All problems" ? PROBLEMS : PROBLEMS.filter(p => p.strand === bankFilter);
 }
-function storeFor(p) { return mode === "daily" ? dailyStore : bankStore; }
+function storeFor() { return mode === "daily" ? dailyStore : bankStore; }
 function keyFor(p) { return mode === "daily" ? p.id : p.n; }
 function saveFor() { if (mode === "daily") saveDaily(); else saveBank(); }
 
@@ -111,8 +111,9 @@ function updateProgress() {
   if (mode === "daily") {
     done = DAILY_PROBLEMS.filter(p => dailyStore[p.id] && dailyStore[p.id].done).length;
     total = DAILY_PROBLEMS.length;
+    const per = DAILY_PROBLEMS.filter(p => p.set === day).length;
     const dayDone = DAILY_PROBLEMS.filter(p => p.set === day && dailyStore[p.id] && dailyStore[p.id].done).length;
-    label = `Day ${day}: ${dayDone} of 20 complete · All daily sets: ${done} of ${total}`;
+    label = `Day ${day}: ${dayDone} of ${per} complete · All daily sets: ${done} of ${total}`;
   } else {
     done = PROBLEMS.filter(p => bankStore[p.n] && bankStore[p.n].done).length;
     total = PROBLEMS.length;
@@ -167,7 +168,8 @@ function render() {
     const head = document.createElement("div");
     head.className = "notice";
     head.style.marginBottom = "18px";
-    head.innerHTML = `<strong>${meta.label}</strong> — ${meta.theme} · 20 problems`;
+    const per = DAILY_PROBLEMS.filter(p => p.set === day).length;
+    head.innerHTML = `<strong>${meta.label}</strong> — ${meta.theme} · ${per} problems`;
     main.appendChild(head);
     if (!isUnlocked(meta)) {
       const lock = document.createElement("div");
@@ -183,7 +185,7 @@ function render() {
   if (!list.length) { main.innerHTML += "<p>No problems in this view.</p>"; return; }
   current = Math.max(0, Math.min(current, list.length - 1));
   const p = list[current];
-  const store = storeFor(p);
+  const store = storeFor();
   const key = keyFor(p);
   const st = store[key] || {};
 

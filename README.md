@@ -4,7 +4,6 @@ A static, single-page quiz with all 62 problems from the NC Math 3 CDM Phase 2
 problem set, aligned to the NC Math 3 Standard Course of Study (NCDPI Math 3
 Unpacking, revised June 2022).
 
-
 ## Files
 
 | File | What it is |
@@ -12,13 +11,13 @@ Unpacking, revised June 2022).
 | `index.html` | The quiz app (layout, navigation, filters, progress tracking, daily-set date logic) |
 | `problems.js` | The 62-problem bank: problem text, NC.M3 standard codes, expected evidence, reviewer notes. **No answers.** |
 | `solutions.js` | Worked solutions for the bank. Loaded **only** when a student clicks "Show worked solution." |
-| `sets.js` | The 10 daily sets (200 problems, Nov 27 – Dec 6, 2026) with their unlock dates. **No answers.** |
+| `sets.js` | The 10 daily sets (600 problems — 60 per day, Nov 27 – Dec 6, 2026) with their unlock dates. **No answers.** |
 | `sets_solutions.js` | Worked solutions for the daily sets, loaded on demand like `solutions.js`. |
 | `.nojekyll` | Tells GitHub Pages to serve the files as-is |
 
 ## Daily sets — no redeployment needed
 
-All 10 daily sets (20 problems each) are already inside `sets.js`. The page
+All 10 daily sets (60 problems each) are already inside `sets.js`. The page
 reads the current date in the America/New_York time zone and unlocks that
 day's set automatically:
 
@@ -26,7 +25,7 @@ day's set automatically:
   unlocks on its date (Day 10 on Sun Dec 6).
 - Earlier sets stay open for review; future sets show as locked.
 - The 10 sets share **no problems with each other or with the 62-problem
-  bank** — 262 distinct problems in total, verified by an automated
+  bank** — 662 distinct problems in total, verified by an automated
   duplicate audit.
 
 Upload the files once and the site runs the whole 10-day schedule by
