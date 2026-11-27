@@ -14,9 +14,13 @@
   .bar { height:8px; background:var(--accent2); border-radius:4px; margin-top:10px; overflow:hidden; }
   .bar > div { height:100%; background:var(--accent); width:0%; transition:width .3s; }
   .progress-label { font-size:13px; color:var(--muted); margin-top:4px; }
-  nav.filters { display:flex; flex-wrap:wrap; gap:8px; padding:14px 20px 0; }
+  .modes { display:flex; gap:8px; padding:14px 20px 0; }
+  .modes button { font:inherit; font-size:15px; padding:8px 16px; border:1px solid var(--line); background:#fff; border-radius:8px; cursor:pointer; }
+  .modes button.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+  nav.filters { display:flex; flex-wrap:wrap; gap:8px; padding:12px 20px 0; }
   nav.filters button { font:inherit; font-size:14px; padding:6px 12px; border:1px solid var(--line); background:#fff; border-radius:20px; cursor:pointer; }
   nav.filters button.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+  nav.filters button.locked { opacity:.55; }
   main { max-width:860px; margin:0 auto; padding:16px 20px 60px; }
   .card { background:#fff; border:1px solid var(--line); border-radius:10px; padding:20px 22px; margin-bottom:18px; }
   .card h2 { margin:0 0 2px; font-size:19px; }
@@ -36,11 +40,12 @@
   .solution { border-top:1px dashed var(--line); margin-top:16px; padding-top:12px; font-size:15.5px; line-height:1.55; display:none; }
   .solution.open { display:block; }
   .solution h3 { margin:0 0 6px; font-size:16px; color:var(--accent); }
-  .pager { display:flex; justify-content:space-between; margin:6px 0 18px; }
+  .pager { display:flex; justify-content:space-between; align-items:center; margin:6px 0 18px; }
   .pager button { font:inherit; font-size:14.5px; padding:8px 16px; border-radius:8px; border:1px solid var(--line); background:#fff; cursor:pointer; }
   .pager button:disabled { opacity:.4; cursor:default; }
+  .notice { background:#fff; border:1px solid var(--line); border-radius:10px; padding:22px; font-size:16px; }
   footer { text-align:center; color:var(--muted); font-size:13px; padding:0 20px 30px; }
-  @media print { header, nav.filters, .pager, .row, textarea { display:none; } }
+  @media print { header, .modes, nav.filters, .pager, .row, textarea { display:none; } }
 </style>
 <script>
   window.MathJax = { tex: { inlineMath: [['$', '$'], ['\\(', '\\)']], displayMath: [['$$', '$$']] } };
@@ -50,61 +55,150 @@
 <body>
 <header>
   <h1>NC Math 3 — CDM Phase 2 Problem Set</h1>
-  <p>62 original word problems aligned to the NC Math 3 Standard Course of Study (NCDPI Unpacking, rev. June 2022). Your work is saved in this browser.</p>
+  <p>Daily sets unlock by date (America/New_York) — no updates needed. Your work is saved in this browser.</p>
   <div class="bar"><div id="barfill"></div></div>
   <div class="progress-label" id="proglabel"></div>
 </header>
 
+<div class="modes" id="modes">
+  <button id="mode-daily" class="active">Daily Sets · Nov 27 – Dec 6</button>
+  <button id="mode-bank">Full Problem Bank · 62</button>
+</div>
 <nav class="filters" id="filters"></nav>
 <main id="main"></main>
-<footer>Worked solutions load only when you ask for them, from a separate file (solutions.js). To run this as a student-only quiz, publish the site without solutions.js.</footer>
+<footer>Worked solutions load only when you ask for them, from separate files (solutions.js / sets_solutions.js). To run this as a student-only quiz, publish the site without those two files.</footer>
 
 <script src="problems.js"></script>
+<script src="sets.js"></script>
 <script>
-const STRANDS = ["All problems", ...new Set(PROBLEMS.map(p => p.strand))];
-let filter = "All problems";
-let current = 0; // index into filtered list
-const store = JSON.parse(localStorage.getItem("math3cdm") || "{}");
-function save() { localStorage.setItem("math3cdm", JSON.stringify(store)); }
+// ---------- date logic (America/New_York) ----------
+function todayET() {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+}
+const RUN_START = DAILY_SETS[0].date;
+// Before the run starts, Day 1 is open as a preview; after that, sets unlock on their date.
+function effectiveToday() { const t = todayET(); return t < RUN_START ? RUN_START : t; }
+function isUnlocked(setMeta) { return setMeta.date <= effectiveToday(); }
+function defaultDay() {
+  let d = 1;
+  for (const s of DAILY_SETS) if (isUnlocked(s)) d = s.set;
+  return d;
+}
 
-const filtersEl = document.getElementById("filters");
-STRANDS.forEach(s => {
-  const b = document.createElement("button");
-  b.textContent = s;
-  if (s === filter) b.classList.add("active");
-  b.onclick = () => { filter = s; current = 0; render(); };
-  filtersEl.appendChild(b);
-});
+// ---------- state ----------
+let mode = "daily";
+let day = defaultDay();
+let bankFilter = "All problems";
+let current = 0;
+const bankStore = JSON.parse(localStorage.getItem("math3cdm") || "{}");
+const dailyStore = JSON.parse(localStorage.getItem("math3cdm_daily") || "{}");
+function saveBank() { localStorage.setItem("math3cdm", JSON.stringify(bankStore)); }
+function saveDaily() { localStorage.setItem("math3cdm_daily", JSON.stringify(dailyStore)); }
 
-function filtered() { return filter === "All problems" ? PROBLEMS : PROBLEMS.filter(p => p.strand === filter); }
+document.getElementById("mode-daily").onclick = () => { mode = "daily"; current = 0; render(); };
+document.getElementById("mode-bank").onclick = () => { mode = "bank"; current = 0; render(); };
+
+function currentList() {
+  if (mode === "daily") return DAILY_PROBLEMS.filter(p => p.set === day);
+  return bankFilter === "All problems" ? PROBLEMS : PROBLEMS.filter(p => p.strand === bankFilter);
+}
+function storeFor(p) { return mode === "daily" ? dailyStore : bankStore; }
+function keyFor(p) { return mode === "daily" ? p.id : p.n; }
+function saveFor() { if (mode === "daily") saveDaily(); else saveBank(); }
 
 function updateProgress() {
-  const done = PROBLEMS.filter(p => store[p.n] && store[p.n].done).length;
-  document.getElementById("barfill").style.width = (100 * done / PROBLEMS.length) + "%";
-  document.getElementById("proglabel").textContent = done + " of " + PROBLEMS.length + " problems marked complete";
+  let done, total, label;
+  if (mode === "daily") {
+    done = DAILY_PROBLEMS.filter(p => dailyStore[p.id] && dailyStore[p.id].done).length;
+    total = DAILY_PROBLEMS.length;
+    const dayDone = DAILY_PROBLEMS.filter(p => p.set === day && dailyStore[p.id] && dailyStore[p.id].done).length;
+    label = `Day ${day}: ${dayDone} of 20 complete · All daily sets: ${done} of ${total}`;
+  } else {
+    done = PROBLEMS.filter(p => bankStore[p.n] && bankStore[p.n].done).length;
+    total = PROBLEMS.length;
+    label = `${done} of ${total} bank problems marked complete`;
+  }
+  document.getElementById("barfill").style.width = (100 * done / total) + "%";
+  document.getElementById("proglabel").textContent = label;
+}
+
+function renderFilters() {
+  const el = document.getElementById("filters");
+  el.innerHTML = "";
+  if (mode === "daily") {
+    for (const s of DAILY_SETS) {
+      const b = document.createElement("button");
+      const open = isUnlocked(s);
+      b.textContent = open ? s.label : `🔒 ${s.label}`;
+      if (!open) b.classList.add("locked");
+      if (s.set === day) b.classList.add("active");
+      b.onclick = () => { day = s.set; current = 0; render(); };
+      el.appendChild(b);
+    }
+  } else {
+    const strands = ["All problems", ...new Set(PROBLEMS.map(p => p.strand))];
+    for (const s of strands) {
+      const b = document.createElement("button");
+      b.textContent = s;
+      if (s === bankFilter) b.classList.add("active");
+      b.onclick = () => { bankFilter = s; current = 0; render(); };
+      el.appendChild(b);
+    }
+  }
+}
+
+function loadScript(src) {
+  return new Promise((res, rej) => {
+    const s = document.createElement("script");
+    s.src = src; s.onload = res; s.onerror = rej;
+    document.body.appendChild(s);
+  });
 }
 
 function render() {
-  document.querySelectorAll("#filters button").forEach(b => b.classList.toggle("active", b.textContent === filter));
-  const list = filtered();
+  document.getElementById("mode-daily").classList.toggle("active", mode === "daily");
+  document.getElementById("mode-bank").classList.toggle("active", mode === "bank");
+  renderFilters();
   const main = document.getElementById("main");
   main.innerHTML = "";
-  if (!list.length) { main.innerHTML = "<p>No problems in this section.</p>"; return; }
+
+  if (mode === "daily") {
+    const meta = DAILY_SETS.find(s => s.set === day);
+    const head = document.createElement("div");
+    head.className = "notice";
+    head.style.marginBottom = "18px";
+    head.innerHTML = `<strong>${meta.label}</strong> — ${meta.theme} · 20 problems`;
+    main.appendChild(head);
+    if (!isUnlocked(meta)) {
+      const lock = document.createElement("div");
+      lock.className = "notice";
+      lock.innerHTML = `🔒 This set unlocks on <strong>${meta.label}</strong>. Earlier sets stay open for review.`;
+      main.appendChild(lock);
+      updateProgress();
+      return;
+    }
+  }
+
+  const list = currentList();
+  if (!list.length) { main.innerHTML += "<p>No problems in this view.</p>"; return; }
   current = Math.max(0, Math.min(current, list.length - 1));
   const p = list[current];
-  const st = store[p.n] || {};
+  const store = storeFor(p);
+  const key = keyFor(p);
+  const st = store[key] || {};
 
   const pager = document.createElement("div");
   pager.className = "pager";
+  const title = mode === "daily" ? `Set ${p.set} · Problem ${p.n}` : `Problem ${p.n} of 62`;
   pager.innerHTML = `<button ${current === 0 ? "disabled" : ""} id="prev">← Previous</button>
-    <span>Problem ${p.n} of 62 · ${current + 1} of ${list.length} in this view</span>
+    <span>${title} · ${current + 1} of ${list.length} in this view</span>
     <button ${current === list.length - 1 ? "disabled" : ""} id="next">Next →</button>`;
   main.appendChild(pager);
 
   const card = document.createElement("section");
   card.className = "card";
   card.innerHTML = `
-    <h2>Problem ${p.n} — ${p.topic}</h2>
+    <h2>${mode === "daily" ? `Day ${p.set} · Problem ${p.n}` : `Problem ${p.n}`} — ${p.topic}</h2>
     <div class="meta">${p.standards.map(s => `<span class="badge">${s}</span>`).join("")} ${p.strand}</div>
     <div class="problem-body">${p.html}</div>
     <div class="evidence"><strong>Expected evidence:</strong> ${p.evidence}</div>
@@ -121,27 +215,30 @@ function render() {
   document.getElementById("prev").onclick = () => { current--; render(); window.scrollTo(0, 0); };
   document.getElementById("next").onclick = () => { current++; render(); window.scrollTo(0, 0); };
   document.getElementById("work").addEventListener("input", e => {
-    store[p.n] = store[p.n] || {}; store[p.n].work = e.target.value; save();
+    store[key] = store[key] || {}; store[key].work = e.target.value; saveFor();
   });
   document.getElementById("donebtn").onclick = e => {
-    store[p.n] = store[p.n] || {}; store[p.n].done = !store[p.n].done; save(); updateProgress();
-    e.target.classList.toggle("is-done", store[p.n].done);
-    e.target.textContent = store[p.n].done ? "✓ Marked complete" : "Mark complete";
+    store[key] = store[key] || {}; store[key].done = !store[key].done; saveFor(); updateProgress();
+    e.target.classList.toggle("is-done", store[key].done);
+    e.target.textContent = store[key].done ? "✓ Marked complete" : "Mark complete";
   };
-  document.getElementById("solbtn").onclick = () => {
+  document.getElementById("solbtn").onclick = async () => {
     const box = document.getElementById("solution");
     if (box.classList.contains("open")) { box.classList.remove("open"); return; }
-    const fill = () => {
-      document.getElementById("solbody").innerHTML = SOLUTIONS[p.n] || "<p>No solution available.</p>";
-      box.classList.add("open");
-      if (window.MathJax) MathJax.typesetPromise([box]);
-    };
-    if (typeof SOLUTIONS !== "undefined") { fill(); return; }
-    const s = document.createElement("script");
-    s.src = "solutions.js";
-    s.onload = fill;
-    s.onerror = () => { document.getElementById("solbody").innerHTML = "<p>Solutions file (solutions.js) is not published on this site.</p>"; box.classList.add("open"); };
-    document.body.appendChild(s);
+    const body = document.getElementById("solbody");
+    try {
+      if (mode === "daily") {
+        if (typeof DAILY_SOLUTIONS === "undefined") await loadScript("sets_solutions.js");
+        body.innerHTML = DAILY_SOLUTIONS[p.id] || "<p>No solution available.</p>";
+      } else {
+        if (typeof SOLUTIONS === "undefined") await loadScript("solutions.js");
+        body.innerHTML = SOLUTIONS[p.n] || "<p>No solution available.</p>";
+      }
+    } catch (e) {
+      body.innerHTML = "<p>Solutions file is not published on this site.</p>";
+    }
+    box.classList.add("open");
+    if (window.MathJax) MathJax.typesetPromise([box]);
   };
   if (window.MathJax) MathJax.typesetPromise([main]);
   updateProgress();
