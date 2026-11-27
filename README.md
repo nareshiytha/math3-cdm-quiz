@@ -8,29 +8,26 @@ Unpacking, revised June 2022).
 
 | File | What it is |
 |---|---|
-| `index.html` | The quiz app (layout, navigation, filters, progress tracking, daily-set date logic) |
-| `problems.js` | The 62-problem bank: problem text, NC.M3 standard codes, expected evidence, reviewer notes. **No answers.** |
-| `solutions.js` | Worked solutions for the bank. Loaded **only** when a student clicks "Show worked solution." |
-| `sets.js` | The 10 daily sets (600 problems — 60 per day, Nov 27 – Dec 6, 2026) with their unlock dates. **No answers.** |
-| `sets_solutions.js` | Worked solutions for the daily sets, loaded on demand like `solutions.js`. |
+| `index.html` | The quiz app (layout, navigation, strand filters, progress tracking) |
+| `problems.js` | The original 62 problems: problem text, NC.M3 standard codes, expected evidence, reviewer notes. **No answers.** |
+| `solutions.js` | Worked solutions for the original 62. Loaded **only** when a student clicks "Show worked solution." |
+| `sets.js` | 600 additional problems (originally written as ten themed sets of 60). **No answers.** |
+| `sets_solutions.js` | Worked solutions for the 600 additional problems, loaded on demand like `solutions.js`. |
 | `.nojekyll` | Tells GitHub Pages to serve the files as-is |
 
-## Daily sets — no redeployment needed
+## One complete set of 662 problems
 
-All 10 daily sets (60 problems each) are already inside `sets.js`. The page
-reads the current date in the America/New_York time zone and unlocks that
-day's set automatically:
+The quiz presents **one complete set**: the original 62 problems first
+(numbered 1–62), then the 600 additional problems (63–662), each tagged
+with the set it came from. There are no daily unlocks and no separate
+tabs — students can work through everything in order, or filter by
+strand (Number & Algebra, Functions, Trigonometry/Proof/Circles,
+Geometry Modeling & Statistics) using the buttons at the top.
 
-- Day 1 (Fri Nov 27) is open from the start as a preview; each later set
-  unlocks on its date (Day 10 on Sun Dec 6).
-- Earlier sets stay open for review; future sets show as locked.
-- The 10 sets share **no problems with each other or with the 62-problem
-  bank** — 662 distinct problems in total, verified by an automated
-  duplicate audit.
-
-Upload the files once and the site runs the whole 10-day schedule by
-itself. Student work and "mark complete" progress are saved per mode in
-the browser's localStorage — nothing is sent anywhere.
+All 662 problems are distinct — no duplicates across the whole set,
+verified by an automated duplicate audit. Student work and "mark
+complete" progress are saved in the browser's localStorage — nothing is
+sent anywhere.
 
 ## Host it on GitHub Pages
 
